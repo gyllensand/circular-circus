@@ -1,21 +1,38 @@
-import { useCallback, useEffect, useState } from "react";
-import { useThree } from "@react-three/fiber";
-import { CameraShake, OrbitControls } from "@react-three/drei";
-import { EffectComposer } from "@react-three/postprocessing";
-import { Transport, start } from "tone";
-import MusicNode from "./MusicNode";
-import Swarm from "./Swarm";
-import SwarmPointLight from "./SwarmPointLight";
-import GodRaysEffect from "./GodRaysEffect";
-import { musicNodes, secondaryMusicNodes } from "../App";
-import MovingGodrayEffect from "./MovingGodrayEffect";
-import LightningLight from "./LightningLight";
-import MusicPointsLights from "./MusicPointLights";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { extend, useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls, useHelper } from "@react-three/drei";
+import { Physics } from "@react-three/cannon";
+import { EffectComposer, SelectiveBloom } from "@react-three/postprocessing";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
+import {
+  AutoFilter,
+  Destination,
+  Filter,
+  Player,
+  start,
+  Transport,
+} from "tone";
+import Dots from "./Dots";
+import {
+  DirectionalLightHelper,
+  PointLightHelper,
+  SpotLight,
+  SpotLightHelper,
+} from "three";
+import Circle from "./Circle";
+import { COLORS, musicNodes } from "../App";
+import Wall from "./Wall";
+import DashedCircle from "./DashedCircle";
+
 const debounce = require("lodash.debounce");
+extend({ EffectComposer, RenderPass, UnrealBloomPass });
+
+export const rows = [{}, {}, {}, {}];
 
 const Scene = () => {
-  const { scene, camera } = useThree();
-  const [hasBeenInteractedWith, setHasBeenInteractedWith] = useState(false);
+  const { scene, camera, size } = useThree();
+  const [toneInitialized, setToneInitialized] = useState(false);
   const [activeNodes, setActiveNodes] = useState<boolean[]>(
     musicNodes.map(() => false)
   );
@@ -26,147 +43,98 @@ const Scene = () => {
   Transport.loopStart = 0;
   Transport.loopEnd = "32m";
 
-  useEffect(() => {
-    musicNodes.forEach(({ player, analyser, supportivePlayer }) => {
-      player.toDestination();
-      player.connect(analyser);
-      analyser.update();
-      supportivePlayer?.toDestination();
-    });
+  if (size.width < 600) {
+    camera.position.set(0, 0, 20);
+  } else {
+    camera.position.set(0, 0, 10);
+  }
 
-    secondaryMusicNodes.forEach((node) => {
-      node.player.toDestination();
+  useEffect(() => {
+    musicNodes.forEach((node) => {
+      // const filter = new AutoFilter(4).start();
+      // filter.frequency.rampTo(20000, 10);
+      // const distortion = new Tone.Distortion(0.5);
+      // connect the player to the filter, distortion and then to the master output
+      node.player.chain(node.filter, Destination);
+
+      // node.player.toDestination();
+      node.player.connect(node.analyser);
+      node.analyser.update();
     });
   }, []);
 
   const initializeTone = useCallback(async () => {
     await start();
-    setHasBeenInteractedWith(true);
+    setToneInitialized(true);
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const onMusicNodeClick = useCallback(
+  const onClick = useCallback(
     debounce(async (index: number) => {
-      if (!hasBeenInteractedWith) {
+      if (!toneInitialized) {
         await initializeTone();
       }
 
       if (Transport.state === "stopped") {
         setTimeout(() => {
-          Transport.start();
+          Transport.start("+0.1");
+          musicNodes.forEach((node) => {
+            node.player.start();
+          });
         }, 100);
       }
 
-      const { player, supportivePlayer } = musicNodes[index];
+      // const { player } = musicNodes[index];
+      // const activePlayers = activeNodes.map((o, i) => (i === index ? !o : o));
+      // setActiveNodes(activePlayers);
 
-      const activePlayers = activeNodes.map((o, i) => (i === index ? !o : o));
+      // if (player.state === "stopped") {
+      //   player.sync().start(0);
+      // } else {
+      //   player.stop().unsync();
 
-      if (player.state === "stopped") {
-        setActiveNodes(activePlayers);
-        player.sync().start(0);
-        supportivePlayer?.sync().start(0);
-      } else {
-        setActiveNodes(activePlayers);
-        player.stop().unsync();
-        supportivePlayer?.stop().unsync();
-
-        const activeNodes = musicNodes.find(
-          (node) => node.player.state === "started"
-        );
-
-        if (!activeNodes && Transport.state === "started") {
-          setTimeout(() => {
-            Transport.stop();
-          }, 100);
-        }
-      }
-
-      if (
-        // play additional perc when all drums enabled
-        secondaryMusicNodes[0].player.state === "stopped" &&
-        [musicNodes[0], musicNodes[1], musicNodes[2]].every(
-          (node) => node.player.state === "started"
-        )
-      ) {
-        secondaryMusicNodes[0].player.sync().start(0);
-      } else if (
-        secondaryMusicNodes[0].player.state === "started" &&
-        ![musicNodes[0], musicNodes[1], musicNodes[2]].every(
-          (node) => node.player.state === "started"
-        )
-      ) {
-        secondaryMusicNodes[0].player.stop().unsync();
-      }
-
-      if (
-        // add more plucks when all synths enabled
-        secondaryMusicNodes[1].player.state === "stopped" &&
-        [musicNodes[3], musicNodes[4]].every(
-          (node) => node.player.state === "started"
-        )
-      ) {
-        secondaryMusicNodes[1].player.sync().start(0);
-      } else if (
-        secondaryMusicNodes[1].player.state === "started" &&
-        ![musicNodes[3], musicNodes[4]].every(
-          (node) => node.player.state === "started"
-        )
-      ) {
-        secondaryMusicNodes[1].player.stop().unsync();
-      }
-
-      if (
-        // add a bass when all other nodes enabled
-        secondaryMusicNodes[2].player.state === "stopped" &&
-        musicNodes.every((node) => node.player.state === "started")
-      ) {
-        secondaryMusicNodes[2].player.sync().start(0);
-      } else if (
-        secondaryMusicNodes[2].player.state === "started" &&
-        !musicNodes.every((node) => node.player.state === "started")
-      ) {
-        secondaryMusicNodes[2].player.stop().unsync();
-      }
+      //   if (!activePlayers.find((o) => o) && Transport.state === "started") {
+      //     setTimeout(() => {
+      //       Transport.stop();
+      //     }, 100);
+      //   }
+      // }
     }, 100),
-    [initializeTone, hasBeenInteractedWith, activeNodes]
+    [initializeTone, toneInitialized, activeNodes]
   );
+
+  const light = useRef<SpotLight>();
+  useHelper(light, SpotLightHelper, 1);
+
+  // light.current?.shadow.bias = -0.01;
 
   return (
     <>
-      <color attach="background" args={[0, 0, 0]} />
-      <pointLight position={[10, 5, 10]} distance={50} intensity={0.5} />
-      <OrbitControls
-        enablePan={false}
-        enableRotate={false}
-        minDistance={2}
-        maxDistance={20}
-      />
+      <color attach="background" args={[255, 255, 255]} />
+      {/* <spotLight
+        ref={light}
+        angle={Math.PI / 8}
+        castShadow
+        penumbra={1}
+        decay={0.5}
+        distance={35}
+        intensity={10}
+        position={[0, 0, 20]}
+      /> */}
 
-      <CameraShake
-        yawFrequency={0.2}
-        pitchFrequency={0.2}
-        rollFrequency={0.2}
-      />
-
-      <Swarm count={5000} />
-      {musicNodes.map((o, i) => i < 3 && <SwarmPointLight key={i} {...o} />)}
-
-      <EffectComposer>
-        <>
-          {musicNodes.map((o, i) => (
-            <MusicNode
-              key={i}
-              {...o}
-              onClick={() => onMusicNodeClick(i)}
-              isActive={activeNodes[i]}
-            />
-          ))}
-          {musicNodes.map((o, i) => i < 3 && <GodRaysEffect key={i} {...o} />)}
-          {/* <MovingGodrayEffect {...musicNodes[4]} /> */}
-          {/* <LightningLight {...musicNodes[4]} /> */}
-          {/* <MusicPointsLights {...musicNodes[3]} /> */}
-        </>
-      </EffectComposer>
+      <ambientLight />
+      {/* <OrbitControls />
+      <Wall /> */}
+      <DashedCircle />
+      {musicNodes.map((node, i) => (
+        <Circle
+          {...node}
+          key={i}
+          index={i}
+          isActive={activeNodes[i]}
+          onClick={() => onClick(i)}
+        />
+      ))}
     </>
   );
 };

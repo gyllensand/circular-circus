@@ -1,132 +1,85 @@
 import { Suspense } from "react";
 import { Canvas, Vector3 } from "@react-three/fiber";
-import { Unit, Player } from "tone";
+import { Filter, Player } from "tone";
 import AudioEnergy, { FrequencyNames } from "./AudioEnergy";
 import Scene from "./components/Scene";
 
 export const DEFAULT_FADE = "0.5s";
 
 export const COLORS = {
+  black: "#000000",
   gold: "#ebb134",
   purple: "#e731ce",
   green: "#30f8a0",
-  red: "#eb3434",
+  red: "#f93b3b",
   orange: "#fe7418",
   blue: "#497fff",
+  pink: "#f93b3b",
 };
 
 export interface MusicNodeData {
-  position: Vector3;
-  player: Player;
-  supportivePlayer?: Player;
-  analyser: AudioEnergy;
-  frequency: FrequencyNames;
+  radius: number;
   color: string;
-  lightPosition: Vector3;
-  size: [number, number, number, number];
+  analyser: AudioEnergy;
+  player: Player;
+  filter: Filter;
 }
 
 export const musicNodes: MusicNodeData[] = [
   {
-    position: [-1.5, 1, -2],
-    size: [0.9, 0.1, 30, 200],
-    frequency: "lowMid",
-    lightPosition: [0, 30, -50],
-    color: COLORS.purple,
+    radius: 0.6,
+    color: COLORS.black,
     analyser: new AudioEnergy(),
+    filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/kick.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/pad.mp3`,
       fadeIn: 0,
     }),
   },
   {
-    position: [1.5, 1, -2],
-    size: [0.9, 0.1, 30, 200],
-    frequency: "highMid",
-    lightPosition: [-30, -10, -50],
-    color: COLORS.green,
+    radius: 0.9,
+    color: COLORS.orange,
     analyser: new AudioEnergy(),
+    filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/clap.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/pluck.mp3`,
       fadeIn: 0,
     }),
   },
   {
-    position: [0, -1.5, -2],
-    size: [0.9, 0.1, 30, 200],
-    frequency: "treble",
-    lightPosition: [30, -20, -50],
-    color: COLORS.gold,
+    radius: 1.2,
+    color: COLORS.blue,
     analyser: new AudioEnergy(),
+    filter: new Filter(200, "lowpass"),
     player: new Player({
       url: `${process.env.PUBLIC_URL}/audio/sticks.mp3`,
       fadeIn: 0,
     }),
   },
   {
-    position: [-2.5, -1.25, -5],
-    size: [0.7, 0.08, 30, 200],
-    frequency: "mid",
-    lightPosition: [30, -20, -50],
-    color: COLORS.blue,
+    radius: 1.5,
+    color: COLORS.green,
     analyser: new AudioEnergy(),
+    filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/pluck.mp3`,
-      fadeIn: 0,
-    }),
-
-    supportivePlayer: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/pluck1.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/kick.mp3`,
       fadeIn: 0,
     }),
   },
   {
-    position: [2.5, -1.25, -5],
-    size: [0.7, 0.08, 30, 200],
-    frequency: "mid",
-    // lightPosition: [0, -120, -150],
-    // lightPosition: [0, 0, 5],
-    lightPosition: [0, -120, -150],
-    color: COLORS.blue,
+    radius: 1.8,
+    color: COLORS.red,
     analyser: new AudioEnergy(),
+    filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/pad.mp3`,
-      fadeIn: 0,
-    }),
-  },
-];
-
-export interface SecondaryMusicNodeData {
-  player: Player;
-  analyser: AudioEnergy;
-}
-
-export const secondaryMusicNodes: SecondaryMusicNodeData[] = [
-  {
-    analyser: new AudioEnergy(),
-    player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/highs.mp3`,
-      fadeIn: 0,
-    }),
-  },
-  {
-    analyser: new AudioEnergy(),
-    player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/pluck2.mp3`,
-      fadeIn: 0,
-    }),
-  },
-  {
-    analyser: new AudioEnergy(),
-    player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/bass.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/clap.mp3`,
       fadeIn: 0,
     }),
   },
 ];
 
 const App = () => (
-  <Canvas style={{ flex: 1 }}>
+  <Canvas shadows>
     <Suspense fallback={null}>
       <Scene />
     </Suspense>

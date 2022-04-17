@@ -1,25 +1,11 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import {
-  DoubleSide,
-  Mesh,
-  PointLight,
-  SpotLight,
-  SpotLightHelper,
-  Vector3,
-} from "three";
-import { COLORS, MusicNodeData } from "../App";
-import { GodRays } from "@react-three/postprocessing";
-import { BlendFunction, KernelSize } from "postprocessing";
-import {
-  useCubeTexture,
-  MeshWobbleMaterial,
-  MeshDistortMaterial,
-  useTexture,
-  useHelper,
-} from "@react-three/drei";
+import { useCallback, useMemo, useRef } from "react";
+import { DoubleSide, Mesh } from "three";
+import { MusicNodeData } from "../App";
+import { MeshDistortMaterial } from "@react-three/drei";
 import { useGesture } from "react-use-gesture";
-import { a, useSpring } from "@react-spring/three";
+import { a, useSpring, SpringRef } from "@react-spring/three";
+import { SpringValue } from "react-spring";
 
 const AnimatedDistortMaterial = a(MeshDistortMaterial);
 const BOUNDS_RADIUS = 2.7;
@@ -28,13 +14,26 @@ const Circle = ({
   onClick,
   analyser,
   filter,
-  isActive,
+  setThemeColor,
+  setThemeOpacity,
+  setThemeIntensity,
+  themeColor,
   radius,
   color,
   index,
 }: MusicNodeData & {
   onClick: () => void;
-  isActive: boolean;
+  themeColor: SpringValue<number[]>;
+  setThemeOpacity?: SpringRef<{
+    themeOpacity: number;
+    themeSize: number;
+  }>;
+  setThemeColor?: SpringRef<{
+    themeColor: number[];
+  }>;
+  setThemeIntensity?: SpringRef<{
+    themeIntensity: number;
+  }>;
   index: number;
 }) => {
   const materialRef = useRef<Mesh>();
@@ -42,6 +41,7 @@ const Circle = ({
   const aspect = useMemo(() => size.width / viewport.width, [size, viewport]);
   const posZ = useMemo(() => 5 - parseFloat(`0.${index}`), [index]);
   const isIdle = useRef(false);
+  const initialScaleDelay = useRef(true);
 
   const [spring, setSpring] = useSpring(() => ({
     position: [0, 0, posZ],
@@ -52,8 +52,14 @@ const Circle = ({
   const [scaleLoop, setScaleLoop] = useSpring(() => ({
     loop: { reverse: true },
     from: { scale: 1 },
-    to: { scale: 1.1 },
-    delay: 500 - index * 50,
+    to: { scale: 1.2 },
+    delay: () => {
+      if (initialScaleDelay.current) {
+        initialScaleDelay.current = false;
+        return 2000 - index * 100;
+      }
+      return 1000;
+    },
   }));
 
   let getPosValue = useCallback(
@@ -88,22 +94,29 @@ const Circle = ({
   const bind = useGesture(
     {
       onDrag: ({ down, movement: [x, y], tap, active }) => {
-        // if (tap) {
-        //     if (isActive) {
-        //       setSpring.start({
-        //         position: [0, 0, posZ],
-        //       });
-        //     }
-        //   onClick();
-        //   return;
-        // }
-
         const isOutsideBounds =
           Math.abs(x / aspect) > BOUNDS_RADIUS ||
           Math.abs(-y / aspect) > BOUNDS_RADIUS;
 
-        const moveValue = Math.abs(x) > Math.abs(y) ? x : y;
+        const moveValue = Math.abs(x) > Math.abs(y) ? Math.abs(x) : Math.abs(y);
         const isActive = down || (!down && isOutsideBounds);
+
+        if (index === 0) {
+          setThemeColor?.start({
+            themeColor: isOutsideBounds ? [255, 255, 255] : [0, 0, 0],
+          });
+
+          setThemeOpacity?.start({
+            themeOpacity: isOutsideBounds ? 0 : 1,
+            themeSize: isOutsideBounds ? 0 : 4,
+          });
+
+          if (isOutsideBounds) {
+            setThemeIntensity?.start({
+              themeIntensity: isOutsideBounds ? 0 : 1000,
+            });
+          }
+        }
 
         setSpring.start({
           position: [
@@ -111,7 +124,7 @@ const Circle = ({
             isActive ? -y / aspect : 0,
             posZ,
           ],
-          distort: isActive ? moveValue / aspect / 10 : 0,
+          distort: isActive ? moveValue / aspect / 15 : 0,
           // distort: isOutsideBounds ? moveValue / aspect / 10 : 0,
         });
       },
@@ -132,7 +145,6 @@ const Circle = ({
           top: -size.height / 2 + radius * 50,
           bottom: size.height / 2 - radius * 50,
         },
-        // filterTaps: true,
         initial: () => [
           spring.position.get()[0] * aspect,
           -spring.position.get()[1] * aspect,
@@ -141,23 +153,8 @@ const Circle = ({
     }
   );
 
-  const light = useRef<SpotLight>();
-  useHelper(light, SpotLightHelper, 1);
-  // light.current?.lookAt(50, 50, 0)
   return (
     <>
-      {/* <spotLight
-        ref={light}
-        angle={Math.PI / 8}
-        castShadow
-        penumbra={1}
-        decay={0.5}
-        distance={35}
-        intensity={10}
-        position={[10, 10, 20]}
-        power={5}
-        color={COLORS.purple}
-      /> */}
       <a.mesh {...spring} {...bind()} castShadow receiveShadow {...scaleLoop}>
         <circleGeometry args={[radius, 100]} />
         {/*
@@ -166,7 +163,7 @@ const Circle = ({
           ref={materialRef}
           side={DoubleSide}
           attach="material"
-          color={color}
+          color={index === 0 ? (themeColor as any) : color}
           factor={0}
           speed={4}
           distort={spring.distort}

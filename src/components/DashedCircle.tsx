@@ -1,10 +1,14 @@
-//@ts-nocheck
+// @ts-nocheck
 import { useFrame } from "@react-three/fiber";
+import { a } from "@react-spring/three";
 import { useMemo, useRef } from "react";
 import { BufferGeometry, Float32BufferAttribute, Line } from "three";
-import { COLORS } from "../App";
 
-const DashedCircle = () => {
+const DashedCircle = ({
+  themeSize,
+}: {
+  themeSize: SpringValue<number[]>;
+}) => {
   const lineRef = useRef<Line>();
 
   const geometry = useMemo(() => {
@@ -28,19 +32,19 @@ const DashedCircle = () => {
   });
 
   return (
-    <line
+    <a.line
       ref={lineRef}
       onUpdate={(line: Line) => line.computeLineDistances()}
       geometry={geometry}
-      scale={4}
+      scale={themeSize}
     >
-      <lineDashedMaterial
-        color={COLORS.black}
-        scale={2}
+      <a.lineDashedMaterial
+        color={[0, 0, 0]}
+        scale={3}
         dashSize={0.1}
         gapSize={0.2}
       />
-    </line>
+    </a.line>
   );
 };
 

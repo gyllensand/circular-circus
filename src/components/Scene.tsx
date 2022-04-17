@@ -1,29 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { extend, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, useHelper } from "@react-three/drei";
-import { Physics } from "@react-three/cannon";
-import { EffectComposer, SelectiveBloom } from "@react-three/postprocessing";
+import { extend, useThree } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
-import {
-  AutoFilter,
-  Destination,
-  Filter,
-  Player,
-  start,
-  Transport,
-} from "tone";
-import Dots from "./Dots";
-import {
-  DirectionalLightHelper,
-  PointLightHelper,
-  SpotLight,
-  SpotLightHelper,
-} from "three";
+import { Destination, start, Transport } from "tone";
+import { SpotLight } from "three";
 import Circle from "./Circle";
-import { COLORS, musicNodes } from "../App";
+import { musicNodes } from "../App";
 import Wall from "./Wall";
 import DashedCircle from "./DashedCircle";
+import { a, useSpring } from "@react-spring/three";
 
 const debounce = require("lodash.debounce");
 extend({ EffectComposer, RenderPass, UnrealBloomPass });
@@ -31,11 +18,26 @@ extend({ EffectComposer, RenderPass, UnrealBloomPass });
 export const rows = [{}, {}, {}, {}];
 
 const Scene = () => {
-  const { scene, camera, size } = useThree();
+  const { camera, size } = useThree();
   const [toneInitialized, setToneInitialized] = useState(false);
   const [activeNodes, setActiveNodes] = useState<boolean[]>(
     musicNodes.map(() => false)
   );
+
+  const [{ themeOpacity, themeSize }, setThemeOpacity] = useSpring(() => ({
+    themeOpacity: 1,
+    themeSize: 4,
+  }));
+
+  const [{ themeColor }, setThemeColor] = useSpring(() => ({
+    themeColor: [0, 0, 0],
+    config: { duration: 0 },
+  }));
+
+  const [{ themeIntensity }, setThemeIntensity] = useSpring(() => ({
+    themeIntensity: 1000,
+    config: { duration: 0 },
+  }));
 
   Transport.timeSignature = [4, 4];
   Transport.bpm.value = 110;
@@ -73,6 +75,10 @@ const Scene = () => {
     debounce(async (index: number) => {
       if (!toneInitialized) {
         await initializeTone();
+        // backgroundColor.to({})
+        // setBackgroundColor.start({
+        //   backgroundColor: 0,
+        // });
       }
 
       if (Transport.state === "stopped") {
@@ -100,38 +106,48 @@ const Scene = () => {
       //   }
       // }
     }, 100),
-    [initializeTone, toneInitialized, activeNodes]
+    [initializeTone, toneInitialized]
   );
 
   const light = useRef<SpotLight>();
-  useHelper(light, SpotLightHelper, 1);
-
-  // light.current?.shadow.bias = -0.01;
+  // useHelper(light, SpotLightHelper, 1);
 
   return (
     <>
-      <color attach="background" args={[255, 255, 255]} />
-      {/* <spotLight
+      {/*
+            // @ts-ignore */}
+      <a.spotLight
         ref={light}
-        angle={Math.PI / 8}
+        angle={Math.PI / 2}
         castShadow
-        penumbra={1}
-        decay={0.5}
-        distance={35}
-        intensity={10}
-        position={[0, 0, 20]}
-      /> */}
-
+        penumbra={0}
+        decay={0}
+        distance={1}
+        intensity={themeIntensity}
+        position={[0, 0, 4]}
+      />
       <ambientLight />
-      {/* <OrbitControls />
-      <Wall /> */}
-      <DashedCircle />
+
+      {/* <OrbitControls /> */}
+
+      <Wall
+        mirror={1}
+        blur={[200, 100]}
+        mixBlur={10}
+        mixStrength={1.5}
+        position={[0, 0, 0]}
+        opacity={themeOpacity}
+      />
+      <DashedCircle themeSize={themeSize} />
       {musicNodes.map((node, i) => (
         <Circle
           {...node}
+          setThemeColor={setThemeColor}
+          setThemeIntensity={setThemeIntensity}
+          setThemeOpacity={setThemeOpacity}
           key={i}
           index={i}
-          isActive={activeNodes[i]}
+          themeColor={themeColor}
           onClick={() => onClick(i)}
         />
       ))}

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Canvas, Vector3 } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { Filter, Player } from "tone";
 import AudioEnergy, { FrequencyNames } from "./AudioEnergy";
 import Scene from "./components/Scene";

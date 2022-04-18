@@ -1,7 +1,6 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef, useMemo } from "react";
 import { InstancedMesh, Matrix4, Vector3 } from "three";
-import { Player } from "tone";
 import AudioEnergy from "../AudioEnergy";
 
 const COUNT = 10000;

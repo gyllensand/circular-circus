@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extend, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
+import { EffectComposer } from "@react-three/postprocessing";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { Destination, start, Transport } from "tone";
@@ -25,17 +25,12 @@ const Scene = () => {
   );
 
   const [{ themeOpacity, themeSize }, setThemeOpacity] = useSpring(() => ({
-    themeOpacity: 1,
+    themeOpacity: 0,
     themeSize: 4,
   }));
 
   const [{ themeColor }, setThemeColor] = useSpring(() => ({
     themeColor: [0, 0, 0],
-    config: { duration: 0 },
-  }));
-
-  const [{ themeIntensity }, setThemeIntensity] = useSpring(() => ({
-    themeIntensity: 1000,
     config: { duration: 0 },
   }));
 
@@ -46,7 +41,7 @@ const Scene = () => {
   Transport.loopEnd = "32m";
 
   if (size.width < 600) {
-    camera.position.set(0, 0, 20);
+    camera.position.set(0, 0, 15);
   } else {
     camera.position.set(0, 0, 10);
   }
@@ -75,10 +70,6 @@ const Scene = () => {
     debounce(async (index: number) => {
       if (!toneInitialized) {
         await initializeTone();
-        // backgroundColor.to({})
-        // setBackgroundColor.start({
-        //   backgroundColor: 0,
-        // });
       }
 
       if (Transport.state === "stopped") {
@@ -114,36 +105,16 @@ const Scene = () => {
 
   return (
     <>
-      {/*
-            // @ts-ignore */}
-      <a.spotLight
-        ref={light}
-        angle={Math.PI / 2}
-        castShadow
-        penumbra={0}
-        decay={0}
-        distance={1}
-        intensity={themeIntensity}
-        position={[0, 0, 4]}
-      />
       <ambientLight />
 
-      {/* <OrbitControls /> */}
+      <OrbitControls enabled={false} />
 
-      <Wall
-        mirror={1}
-        blur={[200, 100]}
-        mixBlur={10}
-        mixStrength={1.5}
-        position={[0, 0, 0]}
-        opacity={themeOpacity}
-      />
+      <Wall themeOpacity={themeOpacity} />
       <DashedCircle themeSize={themeSize} />
       {musicNodes.map((node, i) => (
         <Circle
           {...node}
           setThemeColor={setThemeColor}
-          setThemeIntensity={setThemeIntensity}
           setThemeOpacity={setThemeOpacity}
           key={i}
           index={i}

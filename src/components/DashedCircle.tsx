@@ -40,7 +40,7 @@ const DashedCircle = ({
     >
       <a.lineDashedMaterial
         color={[0, 0, 0]}
-        scale={3}
+        scale={2}
         dashSize={0.1}
         gapSize={0.2}
       />

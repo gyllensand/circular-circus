@@ -6,9 +6,12 @@ import { MeshDistortMaterial } from "@react-three/drei";
 import { useGesture } from "react-use-gesture";
 import { a, useSpring, SpringRef } from "@react-spring/three";
 import { SpringValue } from "react-spring";
+import { easeInOutExpo, range } from "../utils";
 
 const AnimatedDistortMaterial = a(MeshDistortMaterial);
 const BOUNDS_RADIUS = 2.7;
+const MIN_FREQ = 0;
+const MAX_FREQ = 20000;
 
 const Circle = ({
   onClick,
@@ -16,7 +19,6 @@ const Circle = ({
   filter,
   setThemeColor,
   setThemeOpacity,
-  setThemeIntensity,
   themeColor,
   radius,
   color,
@@ -31,14 +33,19 @@ const Circle = ({
   setThemeColor?: SpringRef<{
     themeColor: number[];
   }>;
-  setThemeIntensity?: SpringRef<{
-    themeIntensity: number;
-  }>;
   index: number;
 }) => {
   const materialRef = useRef<Mesh>();
-  const { size, viewport } = useThree();
-  const aspect = useMemo(() => size.width / viewport.width, [size, viewport]);
+  const { size, viewport } = useThree((state) => ({
+    size: state.size,
+    viewport: state.viewport,
+  }));
+  const { getCurrentViewport } = viewport;
+  const aspect = useMemo(
+    () => size.width / getCurrentViewport().width,
+    [size, getCurrentViewport]
+  );
+
   const posZ = useMemo(() => 5 - parseFloat(`0.${index}`), [index]);
   const isIdle = useRef(false);
   const initialScaleDelay = useRef(true);
@@ -53,6 +60,7 @@ const Circle = ({
     loop: { reverse: true },
     from: { scale: 1 },
     to: { scale: 1.2 },
+    config: { friction: 15 },
     delay: () => {
       if (initialScaleDelay.current) {
         initialScaleDelay.current = false;
@@ -62,7 +70,7 @@ const Circle = ({
     },
   }));
 
-  let getPosValue = useCallback(
+  const getPosValue = useCallback(
     () =>
       Math.abs(spring.position.get()[0]) > Math.abs(spring.position.get()[1])
         ? spring.position.get()[0]
@@ -72,7 +80,6 @@ const Circle = ({
 
   useFrame(({ clock }) => {
     analyser.update();
-    // console.log(spring.position.get()[0] * 100)
     const clamp = (energy: number, threshold: number) =>
       isFinite(energy) && energy > threshold ? energy : threshold;
 
@@ -80,23 +87,36 @@ const Circle = ({
     const wobbleEnergy = analyser._map(energy, -130, -30, 0, 1);
     const wobbleValue = clamp(wobbleEnergy, 0);
 
-    filter.frequency.rampTo(Math.abs(getPosValue()) * 100, 0);
+    const interpolatedFreq = range(
+      0,
+      size.width > size.height ? size.width / 2 : size.height / 2,
+      MIN_FREQ,
+      MAX_FREQ,
+      Math.abs(getPosValue() * aspect * 2)
+    );
 
-    if (Math.abs(getPosValue()) / aspect === 0 && isIdle.current) {
+    console.log(easeInOutExpo(interpolatedFreq, MIN_FREQ, MAX_FREQ, MAX_FREQ));
+
+    filter.frequency.rampTo(
+      easeInOutExpo(interpolatedFreq, MIN_FREQ, MAX_FREQ, MAX_FREQ),
+      0
+    );
+
+    if (Math.abs(getPosValue()) / aspect / 2 === 0 && isIdle.current) {
       isIdle.current = false;
       setScaleLoop.resume();
     }
 
     //@ts-ignore
-    // smallMaterial.current!.distort = wobbleValue;
+    // materialRef.current!.distort = wobbleValue;
   });
 
   const bind = useGesture(
     {
       onDrag: ({ down, movement: [x, y], tap, active }) => {
         const isOutsideBounds =
-          Math.abs(x / aspect) > BOUNDS_RADIUS ||
-          Math.abs(-y / aspect) > BOUNDS_RADIUS;
+          Math.abs(x / aspect / 2) > BOUNDS_RADIUS ||
+          Math.abs(-y / aspect / 2) > BOUNDS_RADIUS;
 
         const moveValue = Math.abs(x) > Math.abs(y) ? Math.abs(x) : Math.abs(y);
         const isActive = down || (!down && isOutsideBounds);
@@ -107,25 +127,18 @@ const Circle = ({
           });
 
           setThemeOpacity?.start({
-            themeOpacity: isOutsideBounds ? 0 : 1,
+            themeOpacity: isOutsideBounds ? 1 : 0,
             themeSize: isOutsideBounds ? 0 : 4,
           });
-
-          if (isOutsideBounds) {
-            setThemeIntensity?.start({
-              themeIntensity: isOutsideBounds ? 0 : 1000,
-            });
-          }
         }
 
         setSpring.start({
           position: [
-            isActive ? x / aspect : 0,
-            isActive ? -y / aspect : 0,
+            isActive ? x / aspect / 2 : 0,
+            isActive ? -y / aspect / 2 : 0,
             posZ,
           ],
-          distort: isActive ? moveValue / aspect / 15 : 0,
-          // distort: isOutsideBounds ? moveValue / aspect / 10 : 0,
+          distort: isActive ? range(0, size.width / 2, 0, 0.7, moveValue) : 0,
         });
       },
       onPointerDown: ({ event }) => {
@@ -140,14 +153,14 @@ const Circle = ({
     {
       drag: {
         bounds: {
-          left: -size.width / 2 + radius * 50,
-          right: size.width / 2 - radius * 50,
-          top: -size.height / 2 + radius * 50,
-          bottom: size.height / 2 - radius * 50,
+          left: -size.width / 2 + radius * aspect,
+          right: size.width / 2 - radius * aspect,
+          top: -size.height / 2 + radius * aspect,
+          bottom: size.height / 2 - radius * aspect,
         },
         initial: () => [
-          spring.position.get()[0] * aspect,
-          -spring.position.get()[1] * aspect,
+          spring.position.get()[0] * (aspect * 2),
+          -spring.position.get()[1] * (aspect * 2),
         ],
       },
     }
@@ -163,7 +176,7 @@ const Circle = ({
           ref={materialRef}
           side={DoubleSide}
           attach="material"
-          color={index === 0 ? (themeColor as any) : color}
+          color={index === 0 ? (themeColor as unknown as string) : color}
           factor={0}
           speed={4}
           distort={spring.distort}

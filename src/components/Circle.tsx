@@ -10,13 +10,14 @@ import { easeInOutExpo, range } from "../utils";
 
 const AnimatedDistortMaterial = a(MeshDistortMaterial);
 const BOUNDS_RADIUS = 2.7;
-const MIN_FREQ = 0;
+const MIN_FREQ = 10;
 const MAX_FREQ = 20000;
 
 const Circle = ({
   onClick,
   analyser,
   filter,
+  player,
   setThemeColor,
   setThemeOpacity,
   themeColor,
@@ -95,12 +96,19 @@ const Circle = ({
       Math.abs(getPosValue() * aspect * 2)
     );
 
-    console.log(easeInOutExpo(interpolatedFreq, MIN_FREQ, MAX_FREQ, MAX_FREQ));
+    // filter.frequency.rampTo(
+    //   easeInOutExpo(interpolatedFreq, MIN_FREQ, MAX_FREQ, MAX_FREQ),
+    //   0
+    // );
 
-    filter.frequency.rampTo(
-      easeInOutExpo(interpolatedFreq, MIN_FREQ, MAX_FREQ, MAX_FREQ),
-      0
+    filter.frequency.value = easeInOutExpo(
+      interpolatedFreq,
+      MIN_FREQ,
+      MAX_FREQ,
+      MAX_FREQ
     );
+
+    player.volume.value = easeInOutExpo(interpolatedFreq, 0, 1, 1);
 
     if (Math.abs(getPosValue()) / aspect / 2 === 0 && isIdle.current) {
       isIdle.current = false;
@@ -131,6 +139,8 @@ const Circle = ({
             themeSize: isOutsideBounds ? 0 : 4,
           });
         }
+
+        // filter.frequency.rampTo(isOutsideBounds ? MAX_FREQ : MIN_FREQ, 0.1);
 
         setSpring.start({
           position: [

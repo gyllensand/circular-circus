@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Filter, Player } from "tone";
-import AudioEnergy, { FrequencyNames } from "./AudioEnergy";
+import AudioEnergy from "./AudioEnergy";
 import Scene from "./components/Scene";
 
 export const DEFAULT_FADE = "0.5s";
@@ -32,7 +32,7 @@ export const musicNodes: MusicNodeData[] = [
     analyser: new AudioEnergy(),
     filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/pad.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/percs.mp3`,
       fadeIn: 0,
     }),
   },
@@ -42,7 +42,7 @@ export const musicNodes: MusicNodeData[] = [
     analyser: new AudioEnergy(),
     filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/pluck.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/choir.mp3`,
       fadeIn: 0,
     }),
   },
@@ -52,7 +52,7 @@ export const musicNodes: MusicNodeData[] = [
     analyser: new AudioEnergy(),
     filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/sticks.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/strings.mp3`,
       fadeIn: 0,
     }),
   },
@@ -62,7 +62,7 @@ export const musicNodes: MusicNodeData[] = [
     analyser: new AudioEnergy(),
     filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/kick.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/strings.mp3`,
       fadeIn: 0,
     }),
   },
@@ -72,7 +72,7 @@ export const musicNodes: MusicNodeData[] = [
     analyser: new AudioEnergy(),
     filter: new Filter(200, "lowpass"),
     player: new Player({
-      url: `${process.env.PUBLIC_URL}/audio/clap.mp3`,
+      url: `${process.env.PUBLIC_URL}/audio/drums.mp3`,
       fadeIn: 0,
     }),
   },

@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { extend, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { EffectComposer } from "@react-three/postprocessing";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { Destination, start, Transport } from "tone";
-import { SpotLight } from "three";
 import Circle from "./Circle";
 import { musicNodes } from "../App";
 import Wall from "./Wall";
 import DashedCircle from "./DashedCircle";
-import { a, useSpring } from "@react-spring/three";
+import { useSpring } from "@react-spring/three";
 
 const debounce = require("lodash.debounce");
 extend({ EffectComposer, RenderPass, UnrealBloomPass });
@@ -20,9 +19,6 @@ export const rows = [{}, {}, {}, {}];
 const Scene = () => {
   const { camera, size } = useThree();
   const [toneInitialized, setToneInitialized] = useState(false);
-  const [activeNodes, setActiveNodes] = useState<boolean[]>(
-    musicNodes.map(() => false)
-  );
 
   const [{ themeOpacity, themeSize }, setThemeOpacity] = useSpring(() => ({
     themeOpacity: 0,
@@ -35,10 +31,10 @@ const Scene = () => {
   }));
 
   Transport.timeSignature = [4, 4];
-  Transport.bpm.value = 110;
+  Transport.bpm.value = 135;
   Transport.loop = true;
   Transport.loopStart = 0;
-  Transport.loopEnd = "32m";
+  Transport.loopEnd = "8m";
 
   if (size.width < 600) {
     camera.position.set(0, 0, 15);
@@ -76,32 +72,13 @@ const Scene = () => {
         setTimeout(() => {
           Transport.start("+0.1");
           musicNodes.forEach((node) => {
-            node.player.start();
+            node.player.sync().start();
           });
         }, 100);
       }
-
-      // const { player } = musicNodes[index];
-      // const activePlayers = activeNodes.map((o, i) => (i === index ? !o : o));
-      // setActiveNodes(activePlayers);
-
-      // if (player.state === "stopped") {
-      //   player.sync().start(0);
-      // } else {
-      //   player.stop().unsync();
-
-      //   if (!activePlayers.find((o) => o) && Transport.state === "started") {
-      //     setTimeout(() => {
-      //       Transport.stop();
-      //     }, 100);
-      //   }
-      // }
     }, 100),
     [initializeTone, toneInitialized]
   );
-
-  const light = useRef<SpotLight>();
-  // useHelper(light, SpotLightHelper, 1);
 
   return (
     <>

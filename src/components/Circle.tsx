@@ -1,6 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useMemo, useRef } from "react";
-import { DoubleSide, Mesh } from "three";
+import { DoubleSide, Material } from "three";
 import { MusicNodeData } from "../App";
 import { MeshDistortMaterial } from "@react-three/drei";
 import { useGesture } from "react-use-gesture";
@@ -36,7 +36,7 @@ const Circle = ({
   }>;
   index: number;
 }) => {
-  const materialRef = useRef<Mesh>();
+  const materialRef = useRef<Material>();
   const { size, viewport } = useThree((state) => ({
     size: state.size,
     viewport: state.viewport,

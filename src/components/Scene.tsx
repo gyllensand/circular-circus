@@ -11,7 +11,6 @@ import Wall from "./Wall";
 import DashedCircle from "./DashedCircle";
 import { useSpring } from "@react-spring/three";
 
-const debounce = require("lodash.debounce");
 extend({ EffectComposer, RenderPass, UnrealBloomPass });
 
 export const rows = [{}, {}, {}, {}];
@@ -61,24 +60,20 @@ const Scene = () => {
     setToneInitialized(true);
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const onClick = useCallback(
-    debounce(async (index: number) => {
-      if (!toneInitialized) {
-        await initializeTone();
-      }
+  const onClick = useCallback(async () => {
+    if (!toneInitialized) {
+      await initializeTone();
+    }
 
-      if (Transport.state === "stopped") {
-        setTimeout(() => {
-          Transport.start("+0.1");
-          musicNodes.forEach((node) => {
-            node.player.sync().start();
-          });
-        }, 100);
-      }
-    }, 100),
-    [initializeTone, toneInitialized]
-  );
+    if (Transport.state === "stopped") {
+      setTimeout(() => {
+        Transport.start("+0.1");
+        musicNodes.forEach((node) => {
+          node.player.sync().start();
+        });
+      }, 100);
+    }
+  }, [initializeTone, toneInitialized]);
 
   return (
     <>
@@ -96,7 +91,7 @@ const Scene = () => {
           key={i}
           index={i}
           themeColor={themeColor}
-          onClick={() => onClick(i)}
+          onClick={() => onClick()}
         />
       ))}
     </>
